@@ -1,0 +1,10 @@
+{:itonami.blueprint/id "cloud-itonami-card-issuing"
+ :itonami.blueprint/name "Card Issuing (Issuer-Side Card Program Management)"
+ :itonami.blueprint/domain :finance/card-issuing
+ :itonami.blueprint/license "AGPL-3.0-or-later"
+ :itonami.blueprint/social-impact [:financial-inclusion :cross-border-founder-access :data-sovereignty]
+ :itonami.blueprint/governor :card-issuing-governor
+ :itonami.blueprint/robotics false
+ :itonami.blueprint/required-technologies [:identity :forms :dmn :bpmn :audit-ledger]
+ :itonami.blueprint/optional-technologies [:banking :swift]
+ :itonami.blueprint/status :public-oss}

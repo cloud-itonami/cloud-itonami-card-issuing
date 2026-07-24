@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Issuing | cloud-itonami-card-issuing</title>
+  <meta name="description" content="Card Issuing (Issuer-Side Card Program Management) — governed open business blueprint.">
+  <style>
+    :root { --bg:#f5f7fa; --card:#fff; --fg:#1b1f24; --muted:#57606a; --accent:#1e3a8a; --line:#d0d7de; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0d1117; --card:#161b22; --fg:#e6edf3; --muted:#8d96a0; --accent:#58a6ff; --line:#30363d; }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: linear-gradient(135deg, var(--bg), #c3cfe2);
+           min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; color: var(--fg); }
+    .container { max-width: 800px; width: 100%; background: var(--card); border-radius: 12px;
+                 box-shadow: 0 10px 40px rgba(0,0,0,.1); padding: 48px 40px; border: 1px solid var(--line); }
+    h1 { font-size: 1.85rem; color: var(--accent); margin-bottom: 8px; }
+    .badge { display: inline-block; background: #e0e7ff; color: var(--accent); padding: 3px 10px;
+             border-radius: 4px; font-size: .85rem; font-weight: 600; margin-bottom: 20px; }
+    @media (prefers-color-scheme: dark) { .badge { background: #1f2a44; } }
+    .pitch { border-left: 4px solid var(--accent); padding-left: 16px; margin: 20px 0 28px; color: var(--muted); line-height: 1.7; }
+    .pitch p { margin-bottom: 10px; }
+    .meta { font-size: .9rem; color: var(--muted); margin-bottom: 24px; }
+    .meta code { background: var(--bg); padding: 1px 6px; border-radius: 4px; }
+    .cta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+    @media (max-width: 560px) { .cta { grid-template-columns: 1fr; } }
+    .cta a { display: block; text-align: center; text-decoration: none; padding: 14px 18px;
+             border-radius: 8px; font-weight: 600; }
+    .cta .primary { background: var(--accent); color: #fff; }
+    .cta .secondary { border: 1.5px solid var(--accent); color: var(--accent); }
+    ul.links { list-style: none; font-size: .95rem; }
+    ul.links li { margin: 8px 0; }
+    a { color: var(--accent); }
+    footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line);
+             font-size: .85rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Card Issuing</h1>
+    <div class="badge">Issuer-side card program management · maturity R0</div>
+    <div class="pitch">
+      <p>[![ci](https://github.com/cloud-itonami/cloud-itonami-card-issuing/actions/workflows/ci.yml/badge.svg)](https://github.com/cloud-itonami/cloud-itonami-card-issuing/actions/workflows/ci.yml)</p>
+      <p>Open Business Blueprint for card issuing: the issuer side of the card network — BIN/range sponsorship coordination, cardholder account provisioning, issuer-side real-time authorization-decision policy, card lifecycle management, and issuer-side dispute/chargeback initiation. This repository publishes a card-issuing-program actor as an OSS business that any qualified, licensed operator can fork, deploy, run, improve and sell.</p>
+      <p>Built on this workspace's [langgraph-clj](https://github.com/com-junkawasaki/langgraph-clj) StateGraph runtime (portable .cljc, supervised superstep loop, interrupts, in-mem checkpoints) -- the same actor pattern as [cloud-itonami-isic-6419](https://github.com/cloud-itonami/cloud-itonami-isic-6419) (banking), [cloud-itonami-isic-6619](https://github.com/cloud-itonami/cloud-itonami-isic-6619) (card processing/settlement, the acquirer side) and [cloud-itonami-isic-6910](https://github.com/cloud-itonami/cloud-itonami-isic-6910) (company formation). Here it is Card Issuing Advisor ⊣ Card Issuing Governor.</p>
+    </div>
+    <p class="meta">Domain <code>finance/card-issuing</code> · Governor <code>card-issuing-governor</code> · License <code>AGPL-3.0-or-later</code></p>
+    <div class="cta">
+      <a class="primary" href="https://itonami.cloud/isco-1212/">Fork + self-host claim</a>
+      <a class="secondary" href="https://itonami.cloud/docs/go-live.md">Paid go-live path</a>
+    </div>
+    <ul class="links">
+      <li><a href="https://github.com/cloud-itonami/cloud-itonami-card-issuing">GitHub repository</a></li>
+      <li><a href="./operator-quickstart.md">Operator quickstart</a></li>
+      <li><a href="https://github.com/cloud-itonami/cloud-itonami-card-issuing/blob/main/blueprint.edn">blueprint.edn</a></li>
+      <li><a href="https://github.com/cloud-itonami/cloud-itonami-card-issuing/blob/main/README.md">README</a></li>
+    </ul>
+    <footer>
+      <p>Open business blueprint — no invented usage or revenue metrics. 63 tests / 223 assertions passing at R0.</p>
+    </footer>
+  </main>
+</body>
+</html>
