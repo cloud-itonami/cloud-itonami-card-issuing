@@ -3,10 +3,14 @@
 
   Same two-listener shape as cloud-itonami-esim, for the same reason:
 
-    consent  (default :1341)  POST /commit
-                              GET  /proposals/<reference>
-                              GET  /healthz
-    operator (default :1342)  POST /proposals/<reference>/decide
+    consent  (default :1341)  POST /commit                  X-CARD-CONSENT-TOKEN
+                              GET  /proposals/<reference>   X-CARD-CONSENT-TOKEN
+                              GET  /healthz                 (open)
+    operator (default :1342)  POST /proposals/<ref>/decide  X-CARD-OPERATOR-TOKEN
+
+  BOTH surfaces now require a token, and they are DIFFERENT tokens. Holding the app's
+  consent token does not let the app decide its own proposals; that is the whole point of
+  the two gates, and a shared secret would have quietly merged them.
 
   A pending proposal awaits THIS actor's operator. If decide sat on the consent
   surface, the consent surface could approve its own proposals -- it would hold both
@@ -67,6 +71,29 @@
    :phase 3})
 
 (def operator-token-env "CARD_OPERATOR_TOKEN")
+
+(def consent-token-env
+  "The consent surface's shared secret with whichever app holds the Passkey ceremony.
+
+  Loopback binding was the only thing guarding /commit, and loopback is not an
+  authorisation: every process on the host shares it. Without this, anything running
+  locally could POST a proposal carrying `\"status\": \"approved\"` and a
+  passkey-credential-id it invented, and the only thing between that and a real card
+  would be this actor's operator approving what they believed a human had consented to.
+
+  The governor is unaffected either way -- it recomputes every ground-truth fact from
+  recorded state -- so this does not gate what may be committed. It gates WHO MAY CLAIM
+  a subject consented, which is the one thing a governor cannot recompute."
+  "CARD_CONSENT_TOKEN")
+
+(def consent-token-header "X-CARD-CONSENT-TOKEN")
+
+(defn consent-token
+  "The configured consent token, or nil when unset. Read at call time so a test can
+  redef it and a deployment can rotate without a restart."
+  []
+  (let [t (System/getenv consent-token-env)]
+    (when (and t (seq t)) t)))
 
 ;; ---------------------------------------------------------------------------
 ;; wire helpers
@@ -306,12 +333,32 @@
     (handle [_ exchange]
       (try
         (let [method (.getRequestMethod ^HttpExchange exchange)
-              path (.getPath (.getRequestURI ^HttpExchange exchange))]
+              path (.getPath (.getRequestURI ^HttpExchange exchange))
+              expected (consent-token)
+              presented (.getFirst (.getRequestHeaders ^HttpExchange exchange)
+                                   consent-token-header)]
           (cond
+            ;; /healthz stays open: it carries no subject data and a deployment needs to
+            ;; be able to ask whether this actor is up before it has a token to ask with.
             (and (= "GET" method) (= "/healthz" path))
             (send! exchange 200 {:status "ok"
                                  :actor (:actor-id actor-context)
                                  :cardholders (count (store/all-cardholders store))})
+
+            ;; Everything past /healthz needs the token, and an UNSET token refuses
+            ;; rather than waves through -- failing open would leave this surface most
+            ;; permissive exactly where nobody had configured it, which is the same
+            ;; reasoning the operator surface already applies.
+            (nil? expected)
+            (send! exchange 503
+                   {:status "held"
+                    :refusal {:rule :consent-surface-unconfigured
+                              :detail (str consent-token-env
+                                           " が未設定のため proposal を受け付けません")}})
+
+            (not= expected presented)
+            (send! exchange 401
+                   {:status "held" :refusal {:rule :consent-token-mismatch}})
 
             (and (= "GET" method) (re-matches #"/proposals/[^/]+" path))
             (send! exchange 200
@@ -430,6 +477,10 @@
     (println "    POST /proposals/<reference>/decide")
     (println (str "         requires header X-CARD-OPERATOR-TOKEN = $" operator-token-env))
     (println)
+    (if (consent-token)
+      (println (str "consent surface: token configured (" consent-token-header ")"))
+      (println (str "consent surface: " consent-token-env
+                    " is UNSET, so every proposal is refused (fail closed)")))
     (if (operator-token)
       (println "operator surface: token configured")
       (println (str "operator surface: " operator-token-env
