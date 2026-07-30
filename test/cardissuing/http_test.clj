@@ -21,6 +21,7 @@
   (-> (HttpClient/newBuilder) (.connectTimeout (Duration/ofSeconds 5)) (.build)))
 
 (def token "test-card-operator-token")
+(def consent "test-card-consent-token")
 
 (defn- req [port path]
   (HttpRequest/newBuilder (URI/create (str "http://127.0.0.1:" port path))))
@@ -30,26 +31,39 @@
     {:status (.statusCode res)
      :body (try (json/read-str (.body res) :key-fn keyword) (catch Exception _ nil))}))
 
-(defn- post [port path body & [header value]]
+(defn- post
+  "POST with the consent token attached by default -- the consent surface requires it.
+  Pass an explicit header/value pair to add one (the operator token), or :no-consent to
+  send nothing, which is how the refusal paths are exercised."
+  [port path body & [header value]]
   (let [b (-> (req port path)
               (.timeout (Duration/ofSeconds 10))
               (.header "Content-Type" "application/json"))
-        b (cond-> b value (.header header value))]
+        b (if (= :no-consent header) b (.header b "X-CARD-CONSENT-TOKEN" consent))
+        b (cond-> b (and value (not= :no-consent header)) (.header header value))]
     (send-it (.POST b (HttpRequest$BodyPublishers/ofString (json/write-str body))))))
 
 (defn- get! [port path]
+  (send-it (.GET (.header (.timeout (req port path) (Duration/ofSeconds 10))
+                          "X-CARD-CONSENT-TOKEN" consent))))
+
+(defn- get-without-consent! [port path]
   (send-it (.GET (.timeout (req port path) (Duration/ofSeconds 10)))))
 
 (defn- with-actor
   "Run f with both surfaces on ephemeral ports. f receives
-  [consent-port operator-port store app]."
+  [consent-port operator-port store app].
+
+  The consent token is configured for the duration: /commit now requires it, and a
+  suite that ran without one would only ever exercise the refusal."
   [actuator f]
-  (let [st (store/seed-db)
+  (with-redefs [http/consent-token (constantly consent)]
+   (let [st (store/seed-db)
         running (http/start! {:port 0 :operator-port 0 :store st :actuator actuator})
         cport (.getPort (.getAddress ^com.sun.net.httpserver.HttpServer (:consent running)))
         oport (.getPort (.getAddress ^com.sun.net.httpserver.HttpServer (:operator running)))]
     (try (f cport oport st (:app running))
-         (finally (http/stop! running)))))
+         (finally (http/stop! running))))))
 
 ;; An actuator that records what it was asked and answers as told. No network.
 (defn- recording-actuator [answer calls]
@@ -70,6 +84,11 @@
                          :approval approval :idempotency-key idem})
       answer)
     (cardholder [_ _] nil)))
+
+(defn- rule
+  "The refusal rule a response carries, as a plain string."
+  [body]
+  (some-> (get-in body [:refusal :rule]) keyword name))
 
 (defn- proposal
   ([op value] (proposal op value "p-1"))
@@ -375,3 +394,78 @@
           (is (contains? #{"committed" "held" "pending" "approved-not-actuated"}
                          (:status body))
               (str op " -> " (:status body))))))))
+
+;; ---------------------------------------------------------------------------
+;; the consent surface's own token
+;; ---------------------------------------------------------------------------
+
+(deftest a-proposal-without-the-consent-token-is-refused
+  (testing "loopback is not an authorisation: every process on the host shares it, so
+            without this any local program could POST a proposal claiming a subject
+            consented, and the only thing left would be this actor's operator approving
+            what they believed a human had agreed to"
+    (with-actor nil
+      (fn [port _ _ _]
+        (let [{:keys [status body]} (post port "/commit"
+                                          (proposal "card/issue" issue-value)
+                                          :no-consent)]
+          (is (= 401 status))
+          (is (= "consent-token-mismatch" (rule body))))))))
+
+(deftest a-wrong-consent-token-is-refused
+  (with-actor nil
+    (fn [port _ _ _]
+      (let [b (-> (req port "/commit")
+                  (.timeout (Duration/ofSeconds 10))
+                  (.header "Content-Type" "application/json")
+                  (.header "X-CARD-CONSENT-TOKEN" "wrong"))
+            {:keys [status body]} (send-it
+                                   (.POST b (HttpRequest$BodyPublishers/ofString
+                                             (json/write-str (proposal "card/issue"
+                                                                       issue-value)))))]
+        (is (= 401 status))
+        (is (= "consent-token-mismatch" (rule body)))))))
+
+(deftest an-unset-consent-token-refuses-rather-than-waving-through
+  (testing "failing open would leave this surface most permissive exactly where nobody
+            had configured it -- the same reasoning the operator surface applies"
+    (with-redefs [http/consent-token (constantly nil)]
+      (let [st (store/seed-db)
+            running (http/start! {:port 0 :operator-port 0 :store st})
+            port (.getPort (.getAddress ^com.sun.net.httpserver.HttpServer
+                                        (:consent running)))]
+        (try
+          (let [{:keys [status body]} (post port "/commit"
+                                            (proposal "card/issue" issue-value))]
+            (is (= 503 status))
+            (is (= "consent-surface-unconfigured" (rule body))))
+          (finally (http/stop! running)))))))
+
+(deftest a-read-also-needs-the-token
+  (testing "proposal status names a subject's reference; it is not public either"
+    (with-actor nil
+      (fn [port _ _ app]
+        (let [ref (pending-issue! app port)]
+          (is (= 401 (:status (get-without-consent! port (str "/proposals/" ref)))))
+          (is (= 200 (:status (get! port (str "/proposals/" ref))))))))))
+
+(deftest healthz-stays-open
+  (testing "it carries no subject data, and a deployment must be able to ask whether
+            this actor is up before it has a token to ask with"
+    (with-actor nil
+      (fn [port _ _ _]
+        (let [{:keys [status body]} (get-without-consent! port "/healthz")]
+          (is (= 200 status))
+          (is (= "ok" (:status body))))))))
+
+(deftest the-consent-token-does-not-substitute-for-the-operator-token
+  (testing "holding the app's token must not let the app decide its own proposals --
+            the two gates stay two"
+    (with-redefs [http/operator-token (constantly token)]
+      (with-actor nil
+        (fn [port oport _ app]
+          (let [ref (pending-issue! app port)
+                {:keys [status]} (post oport (str "/proposals/" ref "/decide")
+                                       {:status "approved" :by "app"}
+                                       "X-CARD-OPERATOR-TOKEN" consent)]
+            (is (= 401 status) "the consent token is not an operator token")))))))

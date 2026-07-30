@@ -169,8 +169,14 @@ to. Same two-listener shape as `cloud-itonami-esim`, for the same reason:
 
 | | | |
 |---|---|---|
-| consent | `:1341` | `POST /commit`, `GET /proposals/<ref>`, `GET /healthz` |
-| operator | `:1342` | `POST /proposals/<ref>/decide` |
+| consent | `:1341` | `POST /commit`, `GET /proposals/<ref>` — `X-CARD-CONSENT-TOKEN`; `GET /healthz` open |
+| operator | `:1342` | `POST /proposals/<ref>/decide` — `X-CARD-OPERATOR-TOKEN` |
+
+**両面ともトークンを要求し、しかも別のトークン**です。app の consent token を持っていても
+自分の提案を自分で承認することはできません — 2つの gate が2つであることの全部がそこで、
+共有シークレットにすればそれを静かに1つにしてしまいます。`CARD_CONSENT_TOKEN` が未設定なら
+**503 で全ての proposal を拒否**します（loopback 束縛は認可ではありません — ホスト上の
+すべてのプロセスがそれを共有しています）。
 
 If `decide` sat on the consent surface, the consent surface could approve its own
 proposals — it would hold both gates and the containment would be a comment.
