@@ -1,16 +1,29 @@
 (ns cardissuing.store-contract-test
-  "The Store contract -- MemStore is the only backend at this actor's R0
-  maturity (see README `Maturity`), but this suite is written the same
-  way every sibling actor's own store-contract test is (a dedicated
-  namespace exercising read/write/ledger/registry-history parity), so a
-  future Datomic/kotoba-server backend can be dropped in behind the same
-  contract without rewriting these tests -- only re-running them against
-  the new backend constructor."
-  (:require [clojure.test :refer [deftest is testing]]
+  "The Store contract. MemStore is the only backend at this actor's R0 maturity (see
+  README `Maturity`).
+
+  This docstring used to claim a future Datomic/kotoba-server backend could be dropped
+  in behind the same contract \"only re-running them against the new backend
+  constructor\" -- while every test called `store/seed-db` directly. You could not
+  re-run it against anything without editing it, so the claim was not true of the file
+  making it. A boundary nobody can run twice is an assertion, not a boundary.
+
+  `*make-store*` is now that constructor, and `verify-contract!` runs every assertion
+  in this namespace against whatever it is given. A second backend is one deftest. Same
+  change as cloud-itonami-esim, for the same reason: ADR-2607300300 D4 needs the actors
+  to reach a shared ref, and the argument that this is a swap rather than a rewrite is
+  only worth as much as its being checkable."
+  (:require [clojure.test :as test :refer [deftest is testing]]
             [cardissuing.store :as store]))
 
+(def ^:dynamic *make-store*
+  "The constructor under test. Rebound by `verify-contract!`."
+  store/seed-db)
+
+(defn- fresh [] (*make-store*))
+
 (deftest read-parity
-  (let [s (store/seed-db)]
+  (let [s (fresh)]
     (is (= "田中 一郎" (:name (store/cardholder s "ch-1"))))
     (is (= "JPN" (:jurisdiction (store/cardholder s "ch-1"))))
     (is (= "400000" (:bin (store/cardholder s "ch-1"))))
@@ -28,7 +41,7 @@
     (is (zero? (store/next-sequence s "400000")))))
 
 (deftest write-and-ledger-parity
-  (let [s (store/seed-db)]
+  (let [s (fresh)]
     (testing "partial upsert merges, preserving untouched fields"
       (store/commit-record! s {:effect :cardholder/upsert
                                :value {:id "ch-1" :status :intake :nickname "Ichiro"}})
@@ -78,7 +91,7 @@
       (is (= [:commit :hold] (mapv :disposition (store/ledger s)))))))
 
 (deftest reissue-assigns-a-new-card-reference-and-advances-the-sequence
-  (let [s (store/seed-db)]
+  (let [s (fresh)]
     (store/commit-record! s {:effect :sponsorship/mark-active :path ["400000"]
                              :value {:scheme "Visa" :sponsor-bank "Kotoba Trust Bank"
                                     :range-size 1000 :jurisdiction "JPN"}})
@@ -95,3 +108,44 @@
         (is (= 16 (count second-ref)))
         (is (= :active (:status (store/cardholder s "ch-1"))))
         (is (= 2 (store/next-sequence s "400000")))))))
+
+;; ---------------------------------------------------------------------------
+;; running this contract against another implementation
+;; ---------------------------------------------------------------------------
+
+(defn verify-contract!
+  "Run every assertion in this namespace against `make-store`.
+
+  A second backend -- whatever eventually gives this actor the shared ref
+  ADR-2607300300's D4 asks for -- is added as one deftest:
+
+      (deftest datomic-store-satisfies-the-same-contract
+        (verify-contract! #(datomic-store/store connection)))
+
+  and everything this file pins is checked against it without a line of it changing.
+  Skips itself and the MemStore entry point, or it would recurse."
+  [make-store]
+  (binding [*make-store* make-store]
+    (doseq [[sym v] (ns-publics 'cardissuing.store-contract-test)
+            :when (and (:test (meta v))
+                       (not (contains? #{'mem-store-satisfies-the-contract
+                                         'the-contract-runner-actually-runs-something}
+                                       sym)))]
+      (test/test-var v))))
+
+(deftest mem-store-satisfies-the-contract
+  (testing "the same entry point a second backend will use, exercised today against the
+            only implementation there is -- so the mechanism is not first tried on the
+            day it matters"
+    (verify-contract! store/seed-db)))
+
+(deftest the-contract-runner-actually-runs-something
+  (testing "a runner that silently selected no tests would pass forever and check
+            nothing"
+    (let [n (count (for [[sym v] (ns-publics 'cardissuing.store-contract-test)
+                         :when (and (:test (meta v))
+                                    (not (contains? #{'mem-store-satisfies-the-contract
+                                                      'the-contract-runner-actually-runs-something}
+                                                    sym)))]
+                     sym))]
+      (is (<= 3 n) (str "expected the contract to be several tests, got " n)))))

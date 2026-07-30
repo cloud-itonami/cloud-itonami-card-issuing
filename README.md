@@ -287,7 +287,7 @@ make coverage look bigger.
 ## Maturity
 
 R0 -- Card Issuing Advisor + Card Issuing Governor run as real, tested
-code (see `Run` above; **88 tests / 290 assertions**, lint clean —
+code (see `Run` above; **93 tests / 329 assertions**, lint clean —
 including the HTTP surface driven over real sockets with a recording
 actuator, so "the provider was never called" is asserted rather than
 assumed). Every write path of the Stripe provider itself is still
