@@ -230,8 +230,8 @@ property of this surface.
 
 ```bash
 clojure -M:serve       # both listeners (consent :1341, operator :1342)
-clojure -M:dev:run     # walk one clean sponsor -> issue -> activate -> authorize -> dispute lifecycle, plus three HARD-hold cases, through the actor
-clojure -M:dev:test    # governor contract · phase invariants · store contract · registry (Luhn) conformance · facts coverage · real-LLM advisor
+clojure -M:west:run    # walk one clean sponsor -> issue -> activate -> authorize -> dispute lifecycle, plus three HARD-hold cases, through the actor
+clojure -M:test        # governor contract · phase invariants · store contract · registry (Luhn) conformance · facts coverage · real-LLM advisor
 clojure -M:lint        # clj-kondo (errors fail; CI mirrors this)
 ```
 

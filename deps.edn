@@ -30,11 +30,25 @@
         ;; The HTTP surface's JSON codec. com.sun.net.httpserver is JDK-provided.
         org.clojure/data.json {:mvn/version "2.5.1"}}
  :aliases
- {:dev {:override-deps
-        {io.github.com-junkawasaki/langgraph-clj {:local/root "../../kotoba-lang/langgraph"}
-         io.github.kotoba-lang/langchain {:local/root "../../kotoba-lang/langchain"}
-         io.github.kotoba-lang/card {:local/root "../../kotoba-lang/card"}
-         io.github.kotoba-lang/io-stripe-issuing {:local/root "../../kotoba-lang/io-stripe-issuing"}}}
+ ;; :dev is deliberately EMPTY, and :west holds what it used to.
+ ;;
+ ;; CI invokes `clojure -M:dev:test`. While :dev carried :override-deps pointing at
+ ;; ../../kotoba-lang/*, that command could only ever work inside a west workspace --
+ ;; so the workflow checked those siblings out to satisfy it, which meant CI was
+ ;; supplying the very layout a fork lacks and could not detect that the published
+ ;; repo had no resolvable classpath. Emptying :dev makes the command CI already runs
+ ;; resolve the git coordinates above, which is the thing worth testing.
+ ;;
+ ;; The workflow's sibling checkouts are now dead weight and should be deleted, along
+ ;; with :dev itself, when someone has a token with `workflow` scope: this token has
+ ;; only `repo`, and GitHub refuses (as a 404) any write to .github/workflows without
+ ;; it. Recorded here rather than left as a surprise.
+ {:dev {}
+  :west {:override-deps
+         {io.github.com-junkawasaki/langgraph-clj {:local/root "../../kotoba-lang/langgraph"}
+          io.github.kotoba-lang/langchain {:local/root "../../kotoba-lang/langchain"}
+          io.github.kotoba-lang/card {:local/root "../../kotoba-lang/card"}
+          io.github.kotoba-lang/io-stripe-issuing {:local/root "../../kotoba-lang/io-stripe-issuing"}}}
   :run {:main-opts ["-m" "cardissuing.sim"]}
   ;; clojure -M:serve -> the governed HTTP surfaces a consent surface hands to
   :serve {:main-opts ["-m" "cardissuing.http"]}
