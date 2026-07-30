@@ -162,9 +162,74 @@ double actuation, an illegal lifecycle transition, a velocity/MCC/
 insufficient-funds breach) force **hold** and *cannot* be approved
 past; a clean proposal still always routes to a human.
 
+## The HTTP surface: two listeners, four answers
+
+`cardissuing.http` is what a consent surface (`cloud-itonami-app`) hands proposals
+to. Same two-listener shape as `cloud-itonami-esim`, for the same reason:
+
+| | | |
+|---|---|---|
+| consent | `:1341` | `POST /commit`, `GET /proposals/<ref>`, `GET /healthz` |
+| operator | `:1342` | `POST /proposals/<ref>/decide` |
+
+If `decide` sat on the consent surface, the consent surface could approve its own
+proposals — it would hold both gates and the containment would be a comment.
+Different listeners means it cannot reach `decide` because it is not listening
+there. The operator surface requires `CARD_OPERATOR_TOKEN` and refuses **every**
+decide when that is unset, because failing open would make it most dangerous
+exactly when nobody had configured it.
+
+**What is different here from the eSIM actor: this one can actually issue a card.**
+So approving and issuing are different events and are reported separately:
+
+```
+{"status":"committed",              "record":{…,"provider":{…}}}   approved AND actuated
+{"status":"approved-not-actuated",  "approval-recorded":true, …}   approval RECORDED, provider refused or absent
+{"status":"held",                   "refusal":{…}}                 governor refused — never reaches an operator
+{"status":"pending",                "reference":"…"}               awaiting this actor's operator
+```
+
+`approved-not-actuated` is the state that matters and the one a two-state answer
+would destroy. The graph commits **first**, so the approval is in the ledger
+regardless of what Stripe then does; the provider is called **second**. Collapsing
+them would either lose an approval that really happened or claim a card exists when
+the provider said no. The idempotency key is **derived from the reference**, so a
+retried `decide` cannot issue a second card — that is the key
+`kotoba.card.actuation` requires a caller to supply and deliberately refuses to
+generate itself.
+
+The actuator is **injected and defaults to absent**: with none configured, every
+approval answers `approved-not-actuated` with `:no-actuator-configured`. A live one
+is opt-in via `CARD_ACTUATOR=1` (+ `CARD_ACTUATOR_MODE=live`, which must be set
+deliberately — the provider defaults to Stripe **test** mode).
+
+### The cardholder gap, stated rather than papered over
+
+Two facts about the actor's own phase table collide here, and the surface reports
+the collision instead of hiding it:
+
+- **`:cardholder/intake` auto-commits at phase 3** (it is the one member of that
+  phase's `:auto` set), so no operator ever approves it — and
+  `kotoba.card.actuation/precheck` refuses a call whose approval names nobody. So
+  an auto-commit answers `"committed"` **plus** `"actuation":"not-attempted"` with
+  `"auto-committed-without-operator-approval"`. It writes the local draft; it does
+  not create a Stripe cardholder.
+- **`:card/issue` needs Stripe's cardholder id** (`ich_…`), which is *not* this
+  actor's own `ch-1`. Substituting one for the other would create a card against a
+  cardholder that does not exist — or against someone else's. So when
+  `:stripe-cardholder-id` is absent the actuation is refused with
+  `:stripe-cardholder-unknown` **before any outbound call**, rather than guessed.
+
+The consequence, said plainly: **at phase 3 there is no approved path that creates
+the Stripe cardholder.** Either the id is supplied by whoever created it, or the
+deployment runs at phase 2 — where intake becomes operator-gated but `:card/issue`
+leaves `:writes` entirely. That is a real remaining gap in the integration, not a
+property of this surface.
+
 ## Run
 
 ```bash
+clojure -M:serve       # both listeners (consent :1341, operator :1342)
 clojure -M:dev:run     # walk one clean sponsor -> issue -> activate -> authorize -> dispute lifecycle, plus three HARD-hold cases, through the actor
 clojure -M:dev:test    # governor contract · phase invariants · store contract · registry (Luhn) conformance · facts coverage · real-LLM advisor
 clojure -M:lint        # clj-kondo (errors fail; CI mirrors this)
@@ -216,7 +281,12 @@ make coverage look bigger.
 ## Maturity
 
 R0 -- Card Issuing Advisor + Card Issuing Governor run as real, tested
-code (see `Run` above; 63 tests / 223 assertions, lint clean). Store is
+code (see `Run` above; **82 tests / 279 assertions**, lint clean —
+including the HTTP surface driven over real sockets with a recording
+actuator, so "the provider was never called" is asserted rather than
+assumed). Every write path of the Stripe provider itself is still
+**unexercised against Stripe test mode** — see `io-stripe-issuing`'s own
+README, which says so before anything else. Store is
 `MemStore` only; a Datomic/kotoba-server backend and the WASM-kernel
 tier `cloud-itonami-isic-6619` already has (`wasm/*.kotoba`, hosted
 under `kototama.tender`) are both future maturity-promotion paths, not
