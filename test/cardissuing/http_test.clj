@@ -6,7 +6,7 @@
   then carried it out is a separate fact that can fail on its own. A two-state
   answer would either lose an approval that really happened or claim a card exists
   when the provider said no."
-  (:require [clojure.data.json :as json]
+  (:require [json.data-json :as json]
             [clojure.test :refer [deftest is testing]]
             [kotoba.card.actuation :as actuation]
             [langgraph.graph :as g]

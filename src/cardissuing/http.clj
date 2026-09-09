@@ -46,7 +46,7 @@
   approval answers `approved-not-actuated` with :no-actuator-configured -- which is
   honest about a deployment that has approved something it cannot carry out, rather
   than silently reporting success."
-  (:require [clojure.data.json :as json]
+  (:require [json.data-json :as json]
             [langgraph.graph :as g]
             [kotoba.card.actuation :as actuation]
             [cardissuing.operation :as operation]
