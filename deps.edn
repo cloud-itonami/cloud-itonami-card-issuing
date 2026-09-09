@@ -33,7 +33,8 @@
          :git/sha "02c33fe0aac6343684aef371139257071e841f7e"}
 
         ;; The HTTP surface's JSON codec. com.sun.net.httpserver is JDK-provided.
-        org.clojure/data.json {:mvn/version "2.5.1"}}
+        ;; Pinned as an explicit floor: tools.deps takes the NEWEST sha it is shown.
+        io.github.kotoba-lang/json {:git/sha "4e33e06b4d66b365d27a51393a16a0acd660f9be"}}
  :aliases
  ;; :dev is deliberately EMPTY, and :west holds what it used to.
  ;;
