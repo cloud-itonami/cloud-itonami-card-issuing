@@ -21,7 +21,7 @@ cd cloud-itonami-card-issuing
 ## 2. Run tests
 
 ```bash
-clojure -M:dev:test
+kbb -M:dev:test
 ```
 
 Expect green (63 tests / 223 assertions at R0). Fix failures before operating.

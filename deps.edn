@@ -38,7 +38,7 @@
  :aliases
  ;; :dev is deliberately EMPTY, and :west holds what it used to.
  ;;
- ;; CI invokes `clojure -M:dev:test`. While :dev carried :override-deps pointing at
+ ;; CI invokes `kbb -M:dev:test`. While :dev carried :override-deps pointing at
  ;; ../../kotoba-lang/*, that command could only ever work inside a west workspace --
  ;; so the workflow checked those siblings out to satisfy it, which meant CI was
  ;; supplying the very layout a fork lacks and could not detect that the published
@@ -56,7 +56,7 @@
           io.github.kotoba-lang/card {:local/root "../../kotoba-lang/card"}
           io.github.kotoba-lang/io-stripe-issuing {:local/root "../../kotoba-lang/io-stripe-issuing"}}}
   :run {:main-opts ["-m" "cardissuing.sim"]}
-  ;; clojure -M:serve -> the governed HTTP surfaces a consent surface hands to
+  ;; kbb -M:serve -> the governed HTTP surfaces a consent surface hands to
   :serve {:main-opts ["-m" "cardissuing.http"]}
   :test {:extra-paths ["test"]
          :extra-deps {io.github.cognitect-labs/test-runner

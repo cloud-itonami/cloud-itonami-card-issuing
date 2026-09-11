@@ -116,7 +116,7 @@ public/AGPL-3.0-or-laterのopen business blueprintとして新設し、
 
 4法域（JPN/USA/GBR/DEU）のみspec-basisを持つ（`cardissuing.facts/coverage`
 で常に正直に報告）。Storeは`MemStore`のみ。63 tests / 223 assertions、
-lint clean、`clojure -M:dev:run`でsponsor→issue→activate→authorize→
+lint clean、`kbb -M:dev:run`でsponsor→issue→activate→authorize→
 disputeの一連の流れと、3つのHARD holdケース（二重発行・制裁ヒット・
 法域要件捏造）を確認済み。
 
