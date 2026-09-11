@@ -1,5 +1,5 @@
 (ns cardissuing.sim
-  "Demo driver -- `clojure -M:dev:run`. Walks a clean cardholder through
+  "Demo driver -- `kbb -M:dev:run`. Walks a clean cardholder through
   intake -> BIN assessment -> KYC screening -> BIN sponsorship (always
   escalates) -> human approval -> card issuance -> activate -> a
   real-time authorization decision -> a dispute initiation (all always

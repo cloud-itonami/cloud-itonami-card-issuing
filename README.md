@@ -235,10 +235,10 @@ property of this surface.
 ## Run
 
 ```bash
-clojure -M:serve       # both listeners (consent :1341, operator :1342)
-clojure -M:west:run    # walk one clean sponsor -> issue -> activate -> authorize -> dispute lifecycle, plus three HARD-hold cases, through the actor
-clojure -M:test        # governor contract · phase invariants · store contract · registry (Luhn) conformance · facts coverage · real-LLM advisor
-clojure -M:lint        # clj-kondo (errors fail; CI mirrors this)
+kbb -M:serve       # both listeners (consent :1341, operator :1342)
+kbb -M:west:run    # walk one clean sponsor -> issue -> activate -> authorize -> dispute lifecycle, plus three HARD-hold cases, through the actor
+kbb -M:test        # governor contract · phase invariants · store contract · registry (Luhn) conformance · facts coverage · real-LLM advisor
+kbb -M:lint        # clj-kondo (errors fail; CI mirrors this)
 ```
 
 ## Open business
