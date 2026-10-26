@@ -12,7 +12,10 @@
         ;; kotoba.lang.text, not clojure.string. Pinned as an explicit floor:
         ;; tools.deps takes the NEWEST sha it is shown, so without a floor here
         ;; this repo silently rides whatever a sibling happens to name.
-        io.github.kotoba-lang/text {:git/sha "73bdb13ae7a3d004b44bca08be03a3191157a38f"}
+        io.github.kotoba-lang/text
+        {:git/url "https://github.com/kotoba-lang/kotoba.git"
+         :git/sha "325baa31020aa214bd17cb39e3803712f92f5a1a"
+         :deps/root "lib/kotoba.text"}
        io.github.com-junkawasaki/langgraph-clj
         {:git/url "https://github.com/kotoba-lang/langgraph.git"
          :git/sha "577a59a9d5eb3ef90b81342f4673973f481ff7f4"}
@@ -22,19 +25,24 @@
         ;; THIS repo's governor/legal-predecessor and store/lifecycle!, and the
         ;; library's own tests transcribe them, so a divergence fails there.
         io.github.kotoba-lang/card
-        {:git/url "https://github.com/kotoba-lang/card.git"
-         :git/sha "62d9ea207a717e213177450d5538d8491fee8295"}
+        {:git/url "https://github.com/kotoba-lang/kotoba.git"
+         :git/sha "325baa31020aa214bd17cb39e3803712f92f5a1a"
+         :deps/root "lib/kotoba.card"}
 
         ;; The live issuer. Implements kotoba.card.actuation (post-approval), NOT
         ;; kotoba.card.ports (propose-only). Carries no credential: the key is read
         ;; from a caller-named env var at call time.
         io.github.kotoba-lang/io-stripe-issuing
-        {:git/url "https://github.com/kotoba-lang/io-stripe-issuing.git"
-         :git/sha "02c33fe0aac6343684aef371139257071e841f7e"}
+        {:git/url "https://github.com/kotoba-lang/kotoba.git"
+         :git/sha "325baa31020aa214bd17cb39e3803712f92f5a1a"
+         :deps/root "lib/kotoba.ioStripeIssuing"}
 
         ;; The HTTP surface's JSON codec. com.sun.net.httpserver is JDK-provided.
         ;; Pinned as an explicit floor: tools.deps takes the NEWEST sha it is shown.
-        io.github.kotoba-lang/json {:git/sha "4e33e06b4d66b365d27a51393a16a0acd660f9be"}}
+        io.github.kotoba-lang/json
+        {:git/url "https://github.com/kotoba-lang/kotoba.git"
+         :git/sha "325baa31020aa214bd17cb39e3803712f92f5a1a"
+         :deps/root "lib/kotoba.json"}}
  :aliases
  ;; :dev is deliberately EMPTY, and :west holds what it used to.
  ;;
@@ -53,8 +61,10 @@
   :west {:override-deps
          {io.github.com-junkawasaki/langgraph-clj {:local/root "../../kotoba-lang/langgraph"}
           io.github.kotoba-lang/langchain {:local/root "../../kotoba-lang/langchain"}
-          io.github.kotoba-lang/card {:local/root "../../kotoba-lang/card"}
-          io.github.kotoba-lang/io-stripe-issuing {:local/root "../../kotoba-lang/io-stripe-issuing"}}}
+          io.github.kotoba-lang/card
+        {:local/root "../../kotoba-lang/kotoba/lib/kotoba.card"}
+          io.github.kotoba-lang/io-stripe-issuing
+        {:local/root "../../kotoba-lang/kotoba/lib/kotoba.ioStripeIssuing"}}}
   :run {:main-opts ["-m" "cardissuing.sim"]}
   ;; kbb -M:serve -> the governed HTTP surfaces a consent surface hands to
   :serve {:main-opts ["-m" "cardissuing.http"]}
