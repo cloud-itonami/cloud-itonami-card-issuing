@@ -60,7 +60,8 @@
  {:dev {}
   :west {:override-deps
          {io.github.com-junkawasaki/langgraph-clj {:local/root "../../kotoba-lang/langgraph"}
-          io.github.kotoba-lang/langchain {:local/root "../../kotoba-lang/langchain"}
+          io.github.kotoba-lang/langchain
+        {:local/root "../../kotoba-lang/kotoba/lib/kotoba.langchain"}
           io.github.kotoba-lang/card
         {:local/root "../../kotoba-lang/kotoba/lib/kotoba.card"}
           io.github.kotoba-lang/io-stripe-issuing
